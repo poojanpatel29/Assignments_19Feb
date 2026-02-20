@@ -1,11 +1,13 @@
 from datetime import date, datetime, timedelta, timezone
 from auth import create_access_token, hash_password, verify_password, get_current_user
 from config import settings
-from database import get_db
+from database import get_db, async_get_db
 from fastapi import FastAPI, HTTPException, Depends, APIRouter
 from models import User, UserRole, Student
 from schemas import UserLogin, Token, VerifyEmail, CreateUser
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List
 
 router = APIRouter()
 
@@ -31,13 +33,13 @@ def create_admin(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    
+
     if current_user.role == UserRole.TEACHER:
         user.role = UserRole.STUDENT
 
     if user.role == "teacher" and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=400, detail="Only admin can add Teacher")
-    
+
     if user.role == "admin" and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=400, detail="Only admin can add Admin")
 
@@ -110,3 +112,52 @@ def signup(user: UserLogin, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"email": user.email})
     return {"access_token": access_token, "token_type": "bearer", "role": db_user.role}
+
+
+@router.post("/create_students_batch")
+async def create_students_batch(
+    payload: List[CreateUser],
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(async_get_db),
+):
+    if current_user.role not in [UserRole.ADMIN, UserRole.TEACHER]:
+        raise HTTPException(status_code=403, detail="Not authorized to batch create")
+
+    new_entities = []
+
+    for user_data in payload:
+        role_to_assign = UserRole.STUDENT
+
+        created_by_id = current_user.id
+        if current_user.role == UserRole.ADMIN and user_data.teacher_id:
+            created_by_id = user_data.teacher_id
+
+        hashed_pw = hash_password(user_data.password)
+        new_user = User(
+            username=user_data.username,
+            email=user_data.email,
+            password=hashed_pw,
+            role=role_to_assign,
+            name=user_data.name,
+        )
+
+        db.add(new_user)
+        await db.flush()
+
+        new_student = Student(
+            name=user_data.name,
+            grade=user_data.grade,
+            created_by=created_by_id,
+            user_id=new_user.id,
+        )
+        new_entities.append(new_student)
+
+    db.add_all(new_entities)
+
+    try:
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=f"Batch creation failed: {str(e)}")
+
+    return {"message": f"Successfully created {len(payload)} students"}
