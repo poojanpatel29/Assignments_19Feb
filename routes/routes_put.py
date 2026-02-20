@@ -6,7 +6,7 @@ from models import User, UserRole, Student
 from sqlalchemy.orm import Session
 from helper import generate_otp, send_otp_email
 from smtplib import SMTP
-from schemas import GetAllStudents, UpdateStudents
+from schemas import UpdateStudents
 
 router = APIRouter()
 

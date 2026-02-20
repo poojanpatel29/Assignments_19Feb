@@ -3,7 +3,7 @@ from database import get_db
 from fastapi import FastAPI, HTTPException, Depends, APIRouter
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from models import User, UserRole, Student
-from schemas import UserLogin, Token, UserResponse, GetAllStudents
+from schemas import UserLogin, Token, UserResponse
 from sqlalchemy.orm import Session
 
 router = APIRouter()

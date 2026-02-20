@@ -28,9 +28,12 @@ class CreateUser(BaseModel):
     grade: Optional[str] = None
     teacher_id: Optional[int] = None
 
-class GetAllStudents(BaseModel):
+class GetAllUsers(BaseModel):
+    id: int
     name: str
-    grade: str
+    email: str
+    username: str
+    grade: Optional[str] = None
 
 class UpdateStudents(BaseModel):
     grade: str
