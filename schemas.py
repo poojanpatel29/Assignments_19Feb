@@ -23,7 +23,7 @@ class CreateUser(BaseModel):
     username: str
     email: EmailStr
     password: str
-    role: UserRole
+    role: Optional[UserRole] = None
     name: str
     grade: Optional[str] = None
     teacher_id: Optional[int] = None

@@ -31,6 +31,9 @@ def create_admin(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    
+    if current_user.role == UserRole.TEACHER:
+        user.role = UserRole.STUDENT
 
     if user.role == "teacher" and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=400, detail="Only admin can add Teacher")
